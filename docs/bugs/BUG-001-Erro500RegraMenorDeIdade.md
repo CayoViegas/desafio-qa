@@ -3,6 +3,11 @@
 ## Descrição
 Ao tentar criar uma transação do tipo "Receita" associada a uma Pessoa menor de 18 anos, a API bloqueia a criação (o que está correto conforme a regra de negócio), porém retorna o Status HTTP `500 Internal Server Error`, quando o correto seria retornar `400 Bad Request` ou `422 Unprocessable Entity`.
 
+## Pré-condições
+- A aplicação deve estar em execução.
+- Deve existir uma Pessoa cadastrada com data de nascimento que configure menos de 18 anos.
+- Deve existir uma Categoria cadastrada com a finalidade "Receita".
+
 ## Passos para Reproduzir
 1. Realizar uma requisição POST para `/api/v1/transacoes` com o seguinte corpo:
 ```json
