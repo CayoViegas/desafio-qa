@@ -68,4 +68,52 @@ public class TransacoesIntegrationTests : IClassFixture<CustomWebApplicationFact
 
         transacaoResponseBody.Should().Contain("Menores de 18 anos não podem registrar receitas");
     }
+
+    [Fact(DisplayName = "Deve impedir transação com categoria de finalidade incompatível")]
+    [Trait("Category", "Bug")]
+    [Trait("Issue", "BUG-002")]
+    public async Task DeveImpedir_TransacaoComCategoriaIncompativel()
+    {
+        var pessoaDto = new CreatePessoaDto
+        {
+            Nome = "Adulto Teste",
+            DataNascimento = DateTime.Today.AddYears(-30)
+        };
+        var pessoaResponse = await _client.PostAsJsonAsync("/api/v1/pessoas", pessoaDto);
+
+        var pessoaErro = await pessoaResponse.Content.ReadAsStringAsync();
+        pessoaResponse.StatusCode.Should().Be(HttpStatusCode.Created, $"A API falhou ao criar a pessoa. Detalhes: {pessoaErro}");
+        
+        var pessoa = await pessoaResponse.Content.ReadFromJsonAsync<PessoaDto>();
+
+        var categoriaDto = new CreateCategoriaDto
+        {
+            Descricao = "Conta de Luz",
+            Finalidade = Categoria.EFinalidade.Despesa
+        };
+        var categoriaResponse = await _client.PostAsJsonAsync("/api/v1/categorias", categoriaDto);
+        
+        var categoriaErro = await categoriaResponse.Content.ReadAsStringAsync();
+        categoriaResponse.StatusCode.Should().Be(HttpStatusCode.Created, $"A API falhou ao criar a categoria. Detalhes: {categoriaErro}");
+        
+        var categoria = await categoriaResponse.Content.ReadFromJsonAsync<CategoriaDto>();
+
+        var novaTransacao = new CreateTransacaoDto
+        {
+            Descricao = "Venda de Bicicleta",
+            Valor = 150.0m,
+            Tipo = Transacao.ETipo.Receita,
+            CategoriaId = categoria!.Id,
+            PessoaId = pessoa!.Id,
+            Data = DateTime.Today
+        };
+
+        var transacaoResponse = await _client.PostAsJsonAsync("/api/v1/transacoes", novaTransacao);
+
+        var transacaoResponseBody = await transacaoResponse.Content.ReadAsStringAsync();
+        
+        transacaoResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest, $"BUG-002: Esperado bloqueio (400) da regra de negócio, mas a API retornou: {transacaoResponse.StatusCode} - {transacaoResponseBody}");
+
+        transacaoResponseBody.Should().Contain("Não é possível registrar receita em categoria de despesa.");
+    }
 }
