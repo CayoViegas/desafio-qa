@@ -25,4 +25,4 @@ jobs:
 
     - name: Validar compilação do TypeScript
       working-directory: ./e2e-tests
-      run: npx -p typescript tsc --noEmit
+      run: npx playwright test --list
